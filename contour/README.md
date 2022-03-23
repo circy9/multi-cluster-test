@@ -136,6 +136,27 @@ Find logs
 /host/var/log/pods# more projectcontour_envoy-rh8p2_04664334-6edc-4e1b-80be-06a52eade2c2/envoy/0.log
 ```
 
+### Inspect Envoy
+https://projectcontour.io/docs/v1.20.1/troubleshooting/envoy-admin-interface/
+
+```
+❯ ENVOY_POD=$(kubectl -n projectcontour get pod -l app=envoy -o name | head -1)
+❯ echo $ENVOY_POD
+pod/envoy-qxkrc
+❯ kubectl -n projectcontour port-forward $ENVOY_POD 9001
+```
+
+http://localhost:9001/server_info
+More endpoints: https://projectcontour.io/docs/v1.20.1/troubleshooting/envoy-admin-interface/
+
+### Inspect xDS resources
+https://projectcontour.io/docs/v1.20.1/troubleshooting/contour-xds-resources/
+
+```
+❯ CONTOUR_POD=$(kubectl -n projectcontour get pod -l app=contour -o jsonpath='{.items[0].metadata.name}')
+❯ kubectl -n projectcontour exec $CONTOUR_POD -c contour -- contour cli eds --cafile=/certs/ca.crt --cert-file=/certs/tls.crt --key-file=/certs/tls.key
+```
+
 ### Inspect Envoy metrics
 
 https://projectcontour.io/guides/prometheus/
