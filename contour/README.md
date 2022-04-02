@@ -52,6 +52,142 @@ kubectl -n projectcontour get svc/envoy -o jsonpath='{.status.loadBalancer.ingre
 curl http://52.190.192.246
 ````
 
+### Test gateway
+https://projectcontour.io/guides/gateway-api/
+
+```
+az aks get-credentials -n liqian-cluster2 -g liqian-rg
+kubectl apply -f https://projectcontour.io/quickstart/contour-gateway.yaml
+kubectl apply -f https://projectcontour.io/quickstart/kuard.yaml
+
+kubectl get po,svc,httproute -n projectcontour -l app=kuard
+NAME                         READY   STATUS    RESTARTS   AGE
+pod/kuard-798585497b-hn76q   1/1     Running   0          102s
+pod/kuard-798585497b-hsjsp   1/1     Running   0          102s
+pod/kuard-798585497b-x55d9   1/1     Running   0          102s
+
+NAME            TYPE        CLUSTER-IP   EXTERNAL-IP   PORT(S)   AGE
+service/kuard   ClusterIP   10.0.20.9    <none>        80/TCP    102s
+
+kubectl get gateway --namespace projectcontour
+NAME      CLASS     ADDRESS        READY   AGE
+contour   example   20.112.49.13   True    16h
+
+kubectl describe gateway/contour --namespace projectcontour
+
+kubectl get httproutes --namespace projectcontour
+NAME          HOSTNAMES                     AGE
+kuard         ["local.projectcontour.io"]   35s
+
+kubectl describe httproutes --namespace projectcontour
+Status:
+  Parents:
+    Conditions:
+      Last Transition Time:  2022-04-02T17:13:23Z
+      Message:               Valid HTTPRoute
+      Observed Generation:   1
+      Reason:                Valid
+      Status:                True
+      Type:                  Accepted
+    Controller Name:         projectcontour.io/projectcontour/contour
+    Parent Ref:
+      Group:      gateway.networking.k8s.io
+      Kind:       Gateway
+      Name:       contour
+      Namespace:  projectcontour
+Events:           <none>
+
+export GATEWAY=$(kubectl -n projectcontour get svc/envoy -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+
+# Verified: Can access the app: 200.
+curl -H "Host: local.projectcontour.io" -s -o /dev/null -w "%{http_code}" "http://$GATEWAY/"
+200%
+
+kubectl delete -f https://projectcontour.io/quickstart/kuard.yaml
+
+```
+
+### Test gateway to another cluster
+Follow https://github.com/circy9/multi-cluster-test/blob/first/basic/README.md to set up two clusters.
+Follow "Test gateway" to deploy gateway to cluster2.
+
+```
+az aks get-credentials -n liqian-cluster1 -g liqian-rg
+kubectl describe po nginx
+...
+IP:           10.0.1.34
+...
+
+# Change dummy-service.yaml to use the IP above.
+
+az aks get-credentials -n liqian-cluster2 -g liqian-rg
+kubectl apply -f dummy-service.yaml
+
+kubectl get service
+
+NAME             TYPE           CLUSTER-IP    EXTERNAL-IP     PORT(S)        AGE
+kubernetes       ClusterIP      10.0.20.1     <none>          443/TCP        85m
+nginx-dummy      LoadBalancer   10.0.20.31    20.72.249.170   80:30125/TCP   9m44s
+
+# Verified: Can access nginx.
+curl 20.72.249.170
+<!DOCTYPE html>
+<html>
+<head>
+...
+
+kubectl describe gateway/contour --namespace projectcontour
+Status:
+  Addresses:
+    Type:   IPAddress
+    Value:  20.112.49.13
+  Conditions:
+    Last Transition Time:  2022-04-02T17:26:44Z
+    Message:               Valid Gateway
+    Observed Generation:   1
+    Reason:                Valid
+    Status:                True
+    Type:                  Ready
+
+kubectl describe httproute
+Status:
+  Parents:
+    Conditions:
+      Last Transition Time:  2022-04-02T17:30:56Z
+      Message:               Valid HTTPRoute
+      Observed Generation:   2
+      Reason:                Valid
+      Status:                True
+      Type:                  Accepted
+    Controller Name:         projectcontour.io/projectcontour/contour
+    Parent Ref:
+      Group:      gateway.networking.k8s.io
+      Kind:       Gateway
+      Name:       contour
+      Namespace:  projectcontour
+
+kubectl get gateway --namespace projectcontour
+NAME      CLASS     ADDRESS        READY   AGE
+contour   example   20.112.49.13   True    17h
+
+# Verified: No output if dummer-service.yaml contains:
+#  hostnames:
+#    - "local.projectcontour.io"
+# It is because the IP we used doesn't match the give host names.
+curl 20.112.49.13
+
+# Verified: Works if dummer-service.yaml comments out:
+#  hostnames:
+#    - "local.projectcontour.io"
+curl 20.112.49.13
+<!DOCTYPE html>
+<html>
+<head>
+<title>Welcome to nginx!</title>
+...
+
+```
+
 ### Install Monitoring
 https://projectcontour.io/guides/prometheus/
 
