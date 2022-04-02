@@ -26,7 +26,7 @@ nginx-headless   10.0.1.30:80         21s
 nginx-lb         10.0.1.30:80         5m38s
 ```
 
-Verify pod2pod connectivity within cluster1.
+Verify connectivity within cluster1.
 ```
 kubectl get nodes -o wide
 kubectl debug node/aks-nodepool1-26949044-vmss000000 -it --image=mcr.microsoft.com/aks/fundamental/base-ubuntu:v0.0.11
@@ -39,7 +39,7 @@ curl 10.0.10.50
 curl 10.0.1.30
 ```
 
-Verify pod2pod connectivity from cluster2 to cluster1.
+Verify connectivity from cluster2 to cluster1.
 
 ```
 az aks get-credentials -n liqian-cluster2 -g liqian-rg
@@ -53,4 +53,163 @@ curl 10.0.10.50
 
 # Verified: CAN access nginx via pod ip.
 curl 10.0.1.30
+<!DOCTYPE html>
+<html>
+<head>
+<title>Welcome to nginx!</title>
+...
+
+```
+
+# Two Clusters in two vnet: Can a pod in one cluster reach another pod in another cluster?
+
+Create cluster3 in vnet 2.
+```
+cd tools
+./setup-vnet2.sh
+```
+
+Deploy pods in cluster1 (same as above)
+```
+az aks get-credentials -n liqian-cluster1 -g liqian-rg
+kubectl get nodes -o wide
+NAME                                STATUS   ROLES   AGE     VERSION   INTERNAL-IP   EXTERNAL-IP   OS-IMAGE             KERNEL-VERSION     CONTAINER-RUNTIME
+aks-nodepool1-26949044-vmss000002   Ready    agent   2m56s   v1.21.9   10.0.1.4      <none>        Ubuntu 18.04.6 LTS   5.4.0-1072-azure   containerd://1.4.12+azure-3
+
+kubectl get pods -o wide
+NAME    READY   STATUS    RESTARTS   AGE     IP         NODE                                NOMINATED NODE   READINESS GATES
+nginx   1/1     Running   0          4m17s   10.0.1.6   aks-nodepool1-26949044-vmss000002   <none>           <none>
+
+kubectl get services
+NAME             TYPE           CLUSTER-IP   EXTERNAL-IP    PORT(S)        AGE
+kubernetes       ClusterIP      10.0.10.1    <none>         443/TCP        20h
+nginx            ClusterIP      10.0.10.50   <none>         80/TCP         19h
+nginx-headless   ClusterIP      None         <none>         80/TCP         19h
+nginx-lb         LoadBalancer   10.0.10.5    20.112.49.22   80:31765/TCP   19h
+
+
+```
+
+Get IPs in cluster2
+```
+az aks get-credentials -n liqian-cluster2 -g liqian-rg
+kubectl get node -o wide
+NAME                                STATUS   ROLES   AGE     VERSION   INTERNAL-IP   EXTERNAL-IP   OS-IMAGE             KERNEL-VERSION     CONTAINER-RUNTIME
+aks-nodepool1-17429978-vmss000002   Ready    agent   7m13s   v1.21.9   10.0.2.4      <none>        Ubuntu 18.04.6 LTS   5.4.0-1072-azure   containerd://1.4.12+azure-3
+
+kubectl get pods --namespace projectcontour -o wide
+NAME                       READY   STATUS    RESTARTS   AGE     IP          NODE                                NOMINATED NODE   READINESS GATES
+contour-76cbc54fbf-gw9pr   1/1     Running   0          34m     10.0.2.5    aks-nodepool1-17429978-vmss000002   <none>           <none>
+contour-76cbc54fbf-sdtdn   1/1     Running   0          34m     10.0.2.28   aks-nodepool1-17429978-vmss000002   <none>           <none>
+envoy-zx9vw                2/2     Running   0          8m19s   10.0.2.7    aks-nodepool1-17429978-vmss000002   <none>           <none>
+
+kubectl get services
+NAME          TYPE           CLUSTER-IP   EXTERNAL-IP    PORT(S)        AGE
+kubernetes    ClusterIP      10.0.20.1    <none>         443/TCP        20h
+nginx-dummy   LoadBalancer   10.0.20.56   20.64.136.46   80:30703/TCP   130m
+```
+
+Get IPs in cluster3
+```
+kubectl get node -o wide
+NAME                                STATUS   ROLES   AGE   VERSION   INTERNAL-IP   EXTERNAL-IP   OS-IMAGE             KERNEL-VERSION     CONTAINER-RUNTIME
+aks-nodepool1-17318001-vmss000001   Ready    agent   11m   v1.21.9   10.2.3.4      <none>        Ubuntu 18.04.6 LTS   5.4.0-1072-azure   containerd://1.4.12+azure-3
+
+kubectl get pods -o wide --all-namespaces
+NAMESPACE     NAME                                                    READY   STATUS    RESTARTS   AGE     IP          NODE                                NOMINATED NODE   READINESS GATES
+kube-system   azure-ip-masq-agent-5dkc8                               1/1     Running   0          18m     10.2.3.4    aks-nodepool1-17318001-vmss000001   <none>           <none>
+kube-system   coredns-845757d86-7p9nv                                 1/1     Running   0          44m     10.2.3.15   aks-nodepool1-17318001-vmss000001   <none>           <none>
+kube-system   coredns-845757d86-dpnlj                                 1/1     Running   0          44m     10.2.3.32   aks-nodepool1-17318001-vmss000001   <none>           <none>
+kube-system   coredns-autoscaler-5f85dc856b-gplzz                     1/1     Running   0          44m     10.2.3.23   aks-nodepool1-17318001-vmss000001   <none>           <none>
+kube-system   csi-azuredisk-node-zz5zt                                3/3     Running   0          18m     10.2.3.4    aks-nodepool1-17318001-vmss000001   <none>           <none>
+kube-system   csi-azurefile-node-t2phw                                3/3     Running   0          18m     10.2.3.4    aks-nodepool1-17318001-vmss000001   <none>           <none>
+kube-system   kube-proxy-29qt9                                        1/1     Running   0          18m     10.2.3.4    aks-nodepool1-17318001-vmss000001   <none>           <none>
+kube-system   metrics-server-774f99dbf4-gw4vd                         1/1     Running   0          44m     10.2.3.10   aks-nodepool1-17318001-vmss000001   <none>           <none>
+kube-system   tunnelfront-d578ddc97-24jvv                             1/1     Running   0          44m     10.2.3.28   aks-nodepool1-17318001-vmss000001   <none>           <none>
+
+kubectl get services
+NAME         TYPE        CLUSTER-IP   EXTERNAL-IP   PORT(S)   AGE
+kubernetes   ClusterIP   10.2.30.1    <none>        443/TCP   49m
+```
+
+Verify connectivity from cluster3 to cluster1/2/3.
+```
+az aks get-credentials -n liqian-cluster3 -g liqian-rg
+kubectl get nodes -o wide
+kubectl debug node/aks-nodepool1-17318001-vmss000001 -it --image=mcr.microsoft.com/aks/fundamental/base-ubuntu:v0.0.11
+
+# Verified: Node IP is reachable.
+root@aks-nodepool1-17318001-vmss000001:/# curl 10.0.1.4
+curl: (7) Failed to connect to 10.0.1.4 port 80: Connection refused
+
+root@aks-nodepool1-17318001-vmss000001:/# curl 10.0.2.4
+
+root@aks-nodepool1-17318001-vmss000001:/# curl 10.2.3.4
+curl: (7) Failed to connect to 10.2.3.4 port 80: Connection refused
+
+# Verified: pod IP is reachable.
+root@aks-nodepool1-17318001-vmss000001:/# curl 10.0.1.6
+<!DOCTYPE html>
+<html>
+<head>
+<title>Welcome to nginx!</title>
+...
+
+root@aks-nodepool1-17318001-vmss000001:/# curl 10.0.2.5
+curl: (7) Failed to connect to 10.0.2.5 port 80: Connection refused
+root@aks-nodepool1-17318001-vmss000001:/# curl 10.0.2.7
+curl: (7) Failed to connect to 10.0.2.7 port 80: Connection refused
+root@aks-nodepool1-17318001-vmss000001:/# curl 10.0.2.28
+curl: (7) Failed to connect to 10.0.2.28 port 80: Connection refused
+
+# Verified: Service IPs are unreachable.
+root@aks-nodepool1-17318001-vmss000001:/# curl 10.0.10.5
+^C
+root@aks-nodepool1-17318001-vmss000001:/# curl 10.0.10.50
+^C
+
+root@aks-nodepool1-17318001-vmss000001:/# curl 10.0.20.1
+^C
+root@aks-nodepool1-17318001-vmss000001:/# curl 10.0.20.56
+^C
+
+root@aks-nodepool1-17318001-vmss000001:/# curl 10.2.30.1
+^C
+```
+
+Verify connectivity from cluster2 to cluster1/2/3.
+```
+❯ az aks get-credentials -n liqian-cluster2 -g liqian-rg
+
+❯ kubectl get nodes -o wide
+NAME                                STATUS   ROLES   AGE   VERSION   INTERNAL-IP   EXTERNAL-IP   OS-IMAGE             KERNEL-VERSION     CONTAINER-RUNTIME
+aks-nodepool1-17429978-vmss000002   Ready    agent   15m   v1.21.9   10.0.2.4      <none>        Ubuntu 18.04.6 LTS   5.4.0-1072-azure   containerd://1.4.12+azure-3
+
+kubectl debug node/aks-nodepool1-17429978-vmss000002 -it --image=mcr.microsoft.com/aks/fundamental/base-ubuntu:v0.0.11
+
+# Verified: Node IP is reachable.
+root@aks-nodepool1-17429978-vmss000002:/# curl 10.2.3.4
+curl: (7) Failed to connect to 10.2.3.4 port 80: Connection refused
+
+# Verified: pod IP is reachable.
+root@aks-nodepool1-17429978-vmss000002:/# curl 10.0.1.6
+<!DOCTYPE html>
+<html>
+<head>
+<title>Welcome to nginx!</title>
+...
+root@aks-nodepool1-17429978-vmss000002:/# curl 10.0.2.5
+curl: (7) Failed to connect to 10.0.2.5 port 80: Connection refused
+root@aks-nodepool1-17429978-vmss000002:/# curl 10.2.3.10
+curl: (7) Failed to connect to 10.2.3.10 port 80: Connection refused
+
+# Verified: Service IPs are unreachable.
+root@aks-nodepool1-17429978-vmss000002:/# curl 10.0.10.5
+^C
+root@aks-nodepool1-17429978-vmss000002:/# curl 10.0.10.50
+^C
+root@aks-nodepool1-17429978-vmss000002:/# curl 10.0.20.56
+^C
+root@aks-nodepool1-17429978-vmss000002:/# curl 10.2.30.1
+^C
 ```

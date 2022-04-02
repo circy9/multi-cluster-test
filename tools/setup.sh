@@ -60,7 +60,6 @@ az aks create \
     --name ${CLUSTER1} \
     --no-ssh-key \
     --enable-managed-identity \
-    --assign-identity \
     --network-plugin azure \
     --vnet-subnet-id ${SUBNET_ID1} \
     --dns-service-ip ${DNS_SERVICE_IP1} \
@@ -92,7 +91,6 @@ az aks create \
     --name ${CLUSTER2} \
     --no-ssh-key \
     --enable-managed-identity \
-    --assign-identity \
     --network-plugin azure \
     --vnet-subnet-id ${SUBNET_ID2} \
     --dns-service-ip ${DNS_SERVICE_IP2} \
