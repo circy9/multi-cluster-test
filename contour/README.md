@@ -188,6 +188,67 @@ curl 20.112.49.13
 
 ```
 
+#### Inspect envoy logs
+
+##### Happy Path
+```
+# tab 1: apply service change to comment out "hostnames".
+kubectl apply -f dummy-service.yaml
+
+# tab 2: inspect envoy logs. Note that 10.0.1.34 is the pod IP of nginx in another cluster.
+kubectl get nodes -o wide
+kubectl debug node/aks-nodepool1-17429978-vmss000000 -it --image=mcr.microsoft.com/aks/fundamental/base-ubuntu:v0.0.11
+root@aks-nodepool1-17429978-vmss000001:/host/var/log/pods/projectcontour_envoy-bpvlx_10359dc6-dae5-443f-85c8-b23a77f9ebfe/envoy# tail 0.log
+2022-04-02T18:29:55.867979448Z stderr F [2022-04-02 18:29:55.867][1][info][upstream] [source/common/upstream/cds_api_helper.cc:30] cds: add 1 cluster(s), remove 2 cluster(s)
+2022-04-02T18:29:55.867996748Z stderr F [2022-04-02 18:29:55.867][1][info][upstream] [source/common/upstream/cds_api_helper.cc:67] cds: added/updated 0 cluster(s), skipped 1 unmodified cluster(s)
+2022-04-02T18:29:55.979860299Z stderr F [2022-04-02 18:29:55.979][1][info][upstream] [source/common/upstream/cds_api_helper.cc:30] cds: add 1 cluster(s), remove 2 cluster(s)
+2022-04-02T18:29:55.979915598Z stderr F [2022-04-02 18:29:55.979][1][info][upstream] [source/common/upstream/cds_api_helper.cc:67] cds: added/updated 0 cluster(s), skipped 1 unmodified cluster(s)
+2022-04-02T18:30:26.739957561Z stdout F [2022-04-02T18:30:24.964Z] "GET / HTTP/1.1" 200 - 0 400 1 1 "192.241.213.226" "Mozilla/5.0 zgrab/0.x" "b7b8259c-d31a-45a3-ac70-79c0d24255bf" "20.112.49.13" "10.0.1.34:80"
+# The last message is probably probing.
+
+# tab 1: curl the gateway IP.
+kubectl get gateway --namespace projectcontour
+NAME      CLASS     ADDRESS        READY   AGE
+contour   example   20.112.49.13   True    17h
+
+curl 20.112.49.13
+<!DOCTYPE html>
+<html>
+<head>
+<title>Welcome to nginx!</title>
+...
+
+# tab 2: inspect envoy logs
+root@aks-nodepool1-17429978-vmss000001:/host/var/log/pods/projectcontour_envoy-bpvlx_10359dc6-dae5-443f-85c8-b23a77f9ebfe/envoy# tail 0.log
+2022-04-02T18:33:46.819358723Z stdout F [2022-04-02T18:33:44.093Z] "GET / HTTP/1.1" 200 - 0 615 2 1 "50.47.114.118" "curl/7.79.1" "249a182f-e947-42bd-b66b-033d1bb5a7d3" "20.112.49.13" "10.0.1.34:80"
+
+# Chrome: visit http://20.112.49.13
+
+# tab 2: inspect envoy logs
+root@aks-nodepool1-17429978-vmss000001:/host/var/log/pods/projectcontour_envoy-bpvlx_10359dc6-dae5-443f-85c8-b23a77f9ebfe/envoy# tail 0.log
+2022-04-02T18:36:06.876270353Z stdout F [2022-04-02T18:36:01.334Z] "GET / HTTP/1.1" 304 - 0 0 1 1 "50.47.114.118" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.60 Safari/537.36" "3362da12-63a3-4f3c-a5df-5df7d7a31316" "20.112.49.13" "10.0.1.34:80"
+```
+
+#### Unhappy Path
+```
+# tab 1: apply service change to uncomment  "hostnames".
+kubectl apply -f dummy-service.yaml
+
+# tab 2: inspect envoy logs.
+root@aks-nodepool1-17429978-vmss000001:/host/var/log/pods/projectcontour_envoy-bpvlx_10359dc6-dae5-443f-85c8-b23a77f9ebfe/envoy# tail 0.log
+2022-04-02T18:37:33.646553019Z stderr F [2022-04-02 18:37:33.646][1][info][upstream] [source/common/upstream/cds_api_helper.cc:30] cds: add 1 cluster(s), remove 2 cluster(s)
+2022-04-02T18:37:33.646674718Z stderr F [2022-04-02 18:37:33.646][1][info][upstream] [source/common/upstream/cds_api_helper.cc:67] cds: added/updated 0 cluster(s), skipped 1 unmodified cluster(s)
+2022-04-02T18:37:33.773912792Z stderr F [2022-04-02 18:37:33.773][1][info][upstream] [source/common/upstream/cds_api_helper.cc:30] cds: add 1 cluster(s), remove 2 cluster(s)
+2022-04-02T18:37:33.773946892Z stderr F [2022-04-02 18:37:33.773][1][info][upstream] [source/common/upstream/cds_api_helper.cc:67] cds: added/updated 0 cluster(s), skipped 1 unmodified cluster(s)
+
+# tab 1: curl the gateway IP.
+curl 20.112.49.13
+
+# tab 2: inspect envoy logs. Note that "-" means it failed to route to a target IP.
+root@aks-nodepool1-17429978-vmss000001:/host/var/log/pods/projectcontour_envoy-bpvlx_10359dc6-dae5-443f-85c8-b23a77f9ebfe/envoy# tail 0.log
+2022-04-02T18:38:46.947721702Z stdout F [2022-04-02T18:38:44.413Z] "GET / HTTP/1.1" 404 NR 0 0 0 - "50.47.114.118" "curl/7.79.1" "7b4405f4-fa58-47a9-864c-e5df1eb60fe6" "20.112.49.13" "-"
+```
+
 ### Install Monitoring
 https://projectcontour.io/guides/prometheus/
 
