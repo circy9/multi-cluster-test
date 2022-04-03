@@ -61,7 +61,7 @@ curl 10.0.1.30
 
 ```
 
-# Two Clusters in two vnet: Can a pod in one cluster reach another pod in another cluster?
+# Two Clusters in two vnet: Can a pod in one cluster reach another pod in another cluster? Yes
 
 Create cluster3 in vnet 2.
 ```
@@ -163,6 +163,7 @@ root@aks-nodepool1-17318001-vmss000001:/# curl 10.0.2.28
 curl: (7) Failed to connect to 10.0.2.28 port 80: Connection refused
 
 # Verified: Service IPs are unreachable.
+# This is working as expected: https://docs.microsoft.com/en-us/azure/aks/configure-azure-cni#frequently-asked-questions
 root@aks-nodepool1-17318001-vmss000001:/# curl 10.0.10.5
 ^C
 root@aks-nodepool1-17318001-vmss000001:/# curl 10.0.10.50
@@ -213,3 +214,62 @@ root@aks-nodepool1-17429978-vmss000002:/# curl 10.0.20.56
 root@aks-nodepool1-17429978-vmss000002:/# curl 10.2.30.1
 ^C
 ```
+
+# Two Clusters in two vnets in two regions: Can a pod in one cluster reach another pod in another cluster? Yes
+
+Create cluster4 in vnet 3.
+```
+cd tools
+./setup-vnet3.sh
+```
+
+Deploy pods in cluster1 (same as above)
+```
+az aks get-credentials -n liqian-cluster1 -g liqian-rg
+kubectl apply -f simple-serivce.yaml
+
+❯ kubectl get pods -o wide
+NAME    READY   STATUS    RESTARTS   AGE   IP          NODE                                NOMINATED NODE   READINESS GATES
+nginx   1/1     Running   0          44s   10.0.1.22   aks-nodepool1-26949044-vmss000004   <none>           <none>
+
+❯ kubectl get nodes -o wide
+NAME                                STATUS   ROLES   AGE     VERSION   INTERNAL-IP   EXTERNAL-IP   OS-IMAGE             KERNEL-VERSION     CONTAINER-RUNTIME
+aks-nodepool1-26949044-vmss000004   Ready    agent   2m12s   v1.21.9   10.0.1.4      <none>        Ubuntu 18.04.6 LTS   5.4.0-1072-azure   containerd://1.4.12+azure-3
+```
+
+Verify connectivity from cluster4 to cluster1.
+```
+❯ az aks get-credentials -n liqian-cluster4 -g liqian-eastus2-rg
+
+❯ kubectl get nodes -o wide
+
+kubectl debug node/aks-nodepool1-27206661-vmss000000 -it --image=mcr.microsoft.com/aks/fundamental/base-ubuntu:v0.0.11
+
+# Verified: Node IP is reachable.
+root@aks-nodepool1-27206661-vmss000000:/# curl 10.0.1.4
+curl: (7) Failed to connect to 10.0.1.4 port 80: Connection refused
+
+# Verified: pod IP is reachable.
+root@aks-nodepool1-27206661-vmss000000:/# curl 10.0.1.22
+<!DOCTYPE html>
+<html>
+<head>
+<title>Welcome to nginx!</title>
+...
+
+root@aks-nodepool1-27206661-vmss000000:/# route
+Kernel IP routing table
+Destination     Gateway         Genmask         Flags Metric Ref    Use Iface
+default         10.3.4.1        0.0.0.0         UG    100    0        0 eth0
+10.3.4.0        0.0.0.0         255.255.255.0   U     0      0        0 eth0
+10.3.4.11       0.0.0.0         255.255.255.255 UH    0      0        0 azv9f8c0c51685
+10.3.4.14       0.0.0.0         255.255.255.255 UH    0      0        0 azva1cfb8297b1
+10.3.4.17       0.0.0.0         255.255.255.255 UH    0      0        0 azv1623c868318
+10.3.4.19       0.0.0.0         255.255.255.255 UH    0      0        0 azvc0a7fa39812
+10.3.4.28       0.0.0.0         255.255.255.255 UH    0      0        0 azvb9172c0835f
+168.63.129.16   10.3.4.1        255.255.255.255 UGH   100    0        0 eth0
+169.254.169.254 10.3.4.1        255.255.255.255 UGH   100    0        0 eth0
+
+```
+
+
