@@ -4,11 +4,11 @@
 # Print command
 set -x
 
-NAME_PREFIX=${1:-liqian}
-LOCATION=${2:-westus2}
+# SUBSCRIPTION_ID=${1:"2b03bfb8-e885-4566-a62a-909a11d71692"}
+SUBSCRIPTION_ID=${1:"6ba5b177-6a65-4f5a-b1b9-f9c5b23bc49d"}
+NAME_PREFIX=${2:-liqian}
+LOCATION=${3:-westus2}
 RESOURCE_GROUP="${NAME_PREFIX}-rg"
-# SUBSCRIPTION_ID="2b03bfb8-e885-4566-a62a-909a11d71692"
-SUBSCRIPTION_ID="6ba5b177-6a65-4f5a-b1b9-f9c5b23bc49d"
 
 #####################################
 # Create resource group
