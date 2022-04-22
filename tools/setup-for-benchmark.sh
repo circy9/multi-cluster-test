@@ -4,17 +4,14 @@
 # Print command
 set -x
 
-# SUBSCRIPTION_ID=${1:-2b03bfb8-e885-4566-a62a-909a11d71692}
-SUBSCRIPTION_ID=${1:-6ba5b177-6a65-4f5a-b1b9-f9c5b23bc49d}
-NAME_PREFIX=${2:-liqian}
-LOCATION=${3:-westus2}
+NAME_PREFIX=${1:-liqian}
+LOCATION=${2:-westus2}
 RESOURCE_GROUP="${NAME_PREFIX}-rg"
+# Name: Arc-Validation-Conformance
+SUBSCRIPTION_ID="3959ec86-5353-4b0c-b5d7-3877122861a0"
 
-AZURE_CLIENT_SECRET=
-AZURE_TENANT_ID=
-AZURE_CLIENT_ID=
-
-az account set -s ${SUBSCRIPTION_ID}
+az login
+az account set -s 3959ec86-5353-4b0c-b5d7-3877122861a0
 
 #####################################
 # Create resource group
@@ -40,7 +37,7 @@ az network vnet create \
 echo "Created vnet ${VNET}"
 
 #####################################
-# Create cluster 1 in subnet 1
+# Create hub cluster in subnet 1
 #####################################
 SUBNET1="${NAME_PREFIX}-subnet1"
 SUBNET_ADDRESS_PREFIXES1="10.0.1.0/24"
@@ -66,12 +63,12 @@ az aks create \
     --vnet-subnet-id ${SUBNET_ID1} \
     --dns-service-ip ${DNS_SERVICE_IP1} \
     --service-cidr ${SERVICE_CIDR1} \
-    --node-count 1
+    --node-count 3
 
 az aks get-credentials -n "${CLUSTER1}" -g "${RESOURCE_GROUP}"
 
 #####################################
-# Create cluster 2 in subnet 2
+# Create member cluster 1 in subnet 2
 #####################################
 SUBNET2="${NAME_PREFIX}-subnet2"
 SUBNET_ADDRESS_PREFIXES2="10.0.2.0/24"
@@ -97,6 +94,6 @@ az aks create \
     --vnet-subnet-id ${SUBNET_ID2} \
     --dns-service-ip ${DNS_SERVICE_IP2} \
     --service-cidr ${SERVICE_CIDR2} \
-    --node-count 1
+    --node-count 3
 
 az aks get-credentials -n "${CLUSTER2}" -g "${RESOURCE_GROUP}"
