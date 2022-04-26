@@ -13,7 +13,12 @@ https://projectcontour.io/getting-started/#option-1-yaml
 ```bash
 # Set subscription
 az login
-az account set -s "Visual Studio Enterprise Subscription"
+
+# Use personal subscription.
+# az account set -s "Visual Studio Enterprise Subscription"
+
+# Use shared subscription.
+az account set -s "Arc-Validation-Conformance"
 
 # Create a AKS cluster.
 ./tools/azure-cluster.sh create
@@ -56,7 +61,7 @@ curl http://52.190.192.246
 https://projectcontour.io/guides/gateway-api/
 
 ```
-az aks get-credentials -n liqian-cluster2 -g liqian-rg
+az aks get-credentials -n liqian-cluster1 -g liqian-rg
 kubectl apply -f https://projectcontour.io/quickstart/contour-gateway.yaml
 kubectl apply -f https://projectcontour.io/quickstart/kuard.yaml
 
@@ -109,18 +114,19 @@ kubectl delete -f https://projectcontour.io/quickstart/kuard.yaml
 
 ### Test gateway to another cluster
 Follow https://github.com/circy9/multi-cluster-test/blob/first/basic/README.md to set up two clusters.
-Follow "Test gateway" to deploy gateway to cluster2.
+Follow "Test gateway" to deploy gateway to cluster1.
 
 ```
-az aks get-credentials -n liqian-cluster1 -g liqian-rg
+az aks get-credentials -n liqian-cluster2 -g liqian-rg
+kubectl apply -f simple-service.yaml
 kubectl describe po nginx
 ...
-IP:           10.0.1.34
+IP:           10.0.2.31
 ...
 
 # Change dummy-service.yaml to use the IP above.
 
-az aks get-credentials -n liqian-cluster2 -g liqian-rg
+az aks get-credentials -n liqian-cluster1 -g liqian-rg
 kubectl apply -f dummy-service.yaml
 
 kubectl get service
