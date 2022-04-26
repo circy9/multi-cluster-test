@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: kuar-dummy
+  labels:
+    app: kuar
+spec:
+  type: LoadBalancer
+  ports:
+    - port: 8080
+---
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: kuar-dummy
+subsets:
+  - addresses:
+      - ip: 10.0.1.41
+      - ip: 10.0.2.54
+    ports:
+      - port: 8080
