@@ -1,3 +1,66 @@
+# Two clusters in one vnet: Can we create an SLB to talk to pods in two clusters?
+Create two clusters in one vnet.
+```
+cd tools
+./setup.sh
+```
+
+Change account.
+```
+# Use sub: Arc-Validation-Conformance
+export SUBSCRIPTION_ID=3959ec86-5353-4b0c-b5d7-3877122861a0
+az account set -s ${SUBSCRIPTION_ID}
+```
+
+Deploy service in cluster1 and cluster2
+```
+az aks get-credentials -n liqian-cluster1 -g liqian-rg
+kubectl apply -f kuar-blue.yaml
+
+❯ kubectl get endpoints
+NAME         ENDPOINTS                                AGE
+kuar-blue      10.0.1.41:8080                           8m
+
+az aks get-credentials -n liqian-cluster2 -g liqian-rg
+kubectl apply -f kuar-green.yaml
+
+❯ kubectl get endpoints
+NAME         ENDPOINTS           AGE
+kuar-green   10.0.2.54:8080      2m36s
+```
+
+Change tools/kuar-dummy.yaml to add the pod ips above
+```
+  - addresses:
+      - ip: 10.0.1.41
+      - ip: 10.0.2.54
+```
+
+Deploy dummy service.
+```
+kubectl apply -f kuar-dummy.yaml
+
+❯ kubectl get svc
+NAME         TYPE           CLUSTER-IP    EXTERNAL-IP      PORT(S)          AGE
+kuar-dummy   LoadBalancer   10.0.20.242   51.143.120.174   8080:31599/TCP   3m2s
+kuar-green   LoadBalancer   10.0.20.127   40.91.122.82     8080:30290/TCP   8m19s
+
+❯ kubectl get endpoints
+NAME          ENDPOINTS                       AGE
+kuar-dummy    10.0.1.41:8080,10.0.2.54:8080   10s
+kuar-green    10.0.2.54:8080                  8m25s
+```
+
+Test dummy service. Note that it can hit both pods.
+```
+❯ for i in `seq 1 5`; do curl 51.143.120.174:8080 | grep addrs; done
+var pageContext = {"urlBase":"","hostname":"kuar","addrs":["10.0.1.41"],"version":"v0.10.0-blue","versionColor":"hsl(339,100%,50%)","requestDump":"GET / HTTP/1.1\r\nHost: 51.143.120.174:8080\r\nAccept: */*\r\nUser-Agent: curl/7.79.1","requestProto":"HTTP/1.1","requestAddr":"10.0.2.35:12483"}
+var pageContext = {"urlBase":"","hostname":"kuar","addrs":["10.0.2.54"],"version":"v0.10.0-dirty-green","versionColor":"hsl(3,100%,50%)","requestDump":"GET / HTTP/1.1\r\nHost: 51.143.120.174:8080\r\nAccept: */*\r\nUser-Agent: curl/7.79.1","requestProto":"HTTP/1.1","requestAddr":"10.0.2.4:20693"}
+var pageContext = {"urlBase":"","hostname":"kuar","addrs":["10.0.2.54"],"version":"v0.10.0-dirty-green","versionColor":"hsl(3,100%,50%)","requestDump":"GET / HTTP/1.1\r\nHost: 51.143.120.174:8080\r\nAccept: */*\r\nUser-Agent: curl/7.79.1","requestProto":"HTTP/1.1","requestAddr":"10.0.2.66:48135"}
+var pageContext = {"urlBase":"","hostname":"kuar","addrs":["10.0.1.41"],"version":"v0.10.0-blue","versionColor":"hsl(339,100%,50%)","requestDump":"GET / HTTP/1.1\r\nHost: 51.143.120.174:8080\r\nAccept: */*\r\nUser-Agent: curl/7.79.1","requestProto":"HTTP/1.1","requestAddr":"10.0.2.35:61349"}
+var pageContext = {"urlBase":"","hostname":"kuar","addrs":["10.0.2.54"],"version":"v0.10.0-dirty-green","versionColor":"hsl(3,100%,50%)","requestDump":"GET / HTTP/1.1\r\nHost: 51.143.120.174:8080\r\nAccept: */*\r\nUser-Agent: curl/7.79.1","requestProto":"HTTP/1.1","requestAddr":"10.0.2.4:48895"}
+```
+
 # Two Clusters in one vnet: Can a pod in one cluster reach another pod in another cluster? Yes
 
 Create two clusters in one vnet.

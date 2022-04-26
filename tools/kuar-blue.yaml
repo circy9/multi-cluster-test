@@ -1,0 +1,30 @@
+kind: Pod
+apiVersion: v1
+metadata:
+  name: kuar
+  labels:
+    app: kuar
+spec:
+  containers:
+    - name: kuar
+      image: gcr.io/kuar-demo/kuard-amd64:blue
+      resources:
+        requests:
+          cpu: 100m
+          memory: 128Mi
+        limits:
+          cpu: 250m
+          memory: 256Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kuar-blue
+  labels:
+    app: kuar
+spec:
+  type: LoadBalancer
+  ports:
+    - port: 8080
+  selector:
+    app: kuar
