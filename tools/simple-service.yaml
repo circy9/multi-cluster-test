@@ -42,7 +42,6 @@ spec:
   selector:
     app: nginx
 ---
----
 apiVersion: v1
 kind: Service
 metadata:
@@ -67,7 +66,7 @@ spec:
   rules:
     - http:
         paths:
-          - path: "/nginx"
+          - path: "/"
             pathType: Prefix
             backend:
               service:

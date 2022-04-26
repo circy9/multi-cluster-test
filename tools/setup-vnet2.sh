@@ -5,7 +5,13 @@
 set -x
 
 # SUBSCRIPTION_ID=${1:-2b03bfb8-e885-4566-a62a-909a11d71692}
-SUBSCRIPTION_ID=${1:-6ba5b177-6a65-4f5a-b1b9-f9c5b23bc49d}
+
+# Use personal subscription.
+# SUBSCRIPTION_ID=${1:-6ba5b177-6a65-4f5a-b1b9-f9c5b23bc49d}
+
+# Use subscription Arc-Validation-Conformance.
+SUBSCRIPTION_ID=${1:-3959ec86-5353-4b0c-b5d7-3877122861a0}
+
 NAME_PREFIX=${2:-liqian}
 LOCATION=${3:-westus2}
 RESOURCE_GROUP="${NAME_PREFIX}-rg"
