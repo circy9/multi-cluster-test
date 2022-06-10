@@ -1,0 +1,98 @@
+// This graph depicts the flow of CreateFleetMemberShip.
+digraph CreateFleetMemberShip {
+    fontname="Helvetica,Arial,sans-serif";
+    node [fontname="Helvetica,Arial,sans-serif"];
+    node [colorscheme=pastel16,color=none];
+    edge [fontname="Helvetica,Arial,sans-serif"];
+    compound=true;
+    //nodesep="0.4 equally";
+    //ranksep="0.4 equally";
+
+    node [shape=oval,style=filled,color=black,fillcolor=1];
+    User;
+
+    // Sub graphs.
+    node [shape=oval,style=filled,color=white,fillcolor=white];
+    CosmosDB;
+    FleetAsyncQueue;
+    CCP [label="MemberCluster CCP"];
+    HCP;
+    HubCluster;
+
+    // New components.
+    node [shape=box,style=filled,color=black,fillcolor=2];
+    ARM;
+    FleetAPI;
+    FleetAsync;
+    MemberAgent;
+
+    // Modified components.
+    node [shape=box,style=filled,color=black,fillcolor=2];
+    OverlayMgr;
+
+    // New data.
+    node [shape=record,style=filled,color=black,fillcolor=6];
+    CreateFleetMembershipCommand;
+    MembershipCR [label = "{<f0> MembershipCR | <f1> Spec | <f2> Status}"];
+    MemberClusterCR [label = "{<f0> MemberClusterCR | <f1> Spec | <f2> Status}"];
+    FleetMembership;
+
+    node [shape=record,style=filled,color=black,fillcolor=6];
+    ManagedCluster [label = "{<f0> ManagedCluster | <f1> MembershipProfile}"];
+
+    // Modified data.
+    // node [shape=oval,style=filled,color=black,fillcolor=lightyellow];
+
+    subgraph cluster_CosmosDB {
+        CosmosDB;
+        FleetMembership;
+
+        CosmosDB -> FleetMembership [style=invis];
+    }
+
+    subgraph cluster_FleetAsyncQueue {
+        // Order the nodes.
+        FleetAsyncQueue ->
+        CreateFleetMembershipCommand [style=invis];
+    }
+
+    subgraph cluster_HCP {
+        OperationStatus;
+        // Order nodes.
+        HCP ->
+        ManagedCluster:f1 [style=invis];
+    }
+
+    subgraph cluster_MemberClusterCCP {
+        CCP; MembershipCR; MemberAgent;
+        // Order nodes.
+        CCP ->
+        MemberAgent ->
+        MembershipCR [style=invis];
+    }
+
+    subgraph cluster_HubCluster {
+        // Order nodes.
+        HubCluster ->
+        MemberClusterCR [style=invis];
+    }
+
+    // Order subgraphs.
+    FleetAPI -> FleetAsyncQueue -> FleetAsync -> HCP -> CCP -> HubCluster [style=invis];
+
+    User -> ARM [label="1. PutMembership"];
+    ARM -> FleetAPI [label="2. PutMembership"];
+    FleetAPI -> FleetMembership [label="create",color=red];
+    FleetAPI -> CreateFleetMembershipCommand [label="3. publish",color=red];
+    CreateFleetMembershipCommand -> FleetAsync [label="4. receive"];
+    FleetAsync -> ManagedCluster:f1 [label="3. update",color=red];
+    FleetAsync -> OverlayMgr [label="4. reconcile"];
+    ManagedCluster:f1 -> OverlayMgr [label="5. read"];
+    OverlayMgr -> MembershipCR:f1 [label="6. create",color=red];
+    OverlayMgr -> MemberAgent [label="7. create"];
+    MembershipCR:f1 -> MemberAgent [label="8. watch"];
+    MemberAgent -> MemberClusterCR:f2 [label="9. update heartbeat",color=red]
+    MemberAgent -> MembershipCR:f2 [label="10. update joined=true",color=red];
+    MembershipCR:f2 -> FleetAsync [label="11. wait for joined==true"];
+    FleetAsync -> OperationStatus [label="12. update",color=red];
+}

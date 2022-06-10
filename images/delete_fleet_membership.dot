@@ -1,0 +1,105 @@
+// This graph depicts the flow of DeleteFleetMemberShip.
+digraph DeleteFleetMemberShip {
+    fontname="Helvetica,Arial,sans-serif";
+    node [fontname="Helvetica,Arial,sans-serif"];
+    edge [fontname="Helvetica,Arial,sans-serif"];
+    compound=true;
+    nodesep="0.4 equally";
+    ranksep="0.4 equally";
+
+    // Components.
+    node [color=lightblue]
+    FleetAPI;
+    FleetAsync;
+    FleetHandler;
+    HCP;
+
+    // Queues.
+    node [color=white]
+    FleetAsyncQueue;
+    FleetHandlerTopic;
+
+    // Commands.
+    node [shape=oval,style=filled,color=black,fillcolor=white];
+    DeleteFleetMembership;
+    DeleteMemberAgent;
+
+    // Responses.
+    node [shape=oval,style=filled,color=black,fillcolor=lightgrey];
+    DeleteFleetMembershipDone;
+    DeleteMemberAgentDone;
+
+    // Handlers.
+    node [shape=box,style=filled,color=black,fillcolor=white];
+    HandleDeleteFleetMembership;
+    HandleDeleteMemberAgentDone;
+    HandleDeleteFleetMembershipDone;
+    HandleDeleteMembership;
+
+    subgraph cluster_FleetAPI {
+        style=filled;
+        fillcolor=lightblue;
+        FleetAPI;
+    }
+
+    subgraph cluster_FleetAsyncQueue {
+        // Order the nodes.
+        FleetAsyncQueue ->
+        DeleteFleetMembership ->
+        DeleteMemberAgentDone ->
+        DeleteFleetMembershipDone [style=invis];
+    }
+
+    subgraph cluster_FleetAsync {
+        style=filled;
+        fillcolor=lightblue;
+
+        // Order nodes.
+        FleetAsync ->
+        HandleDeleteFleetMembership ->
+        HandleDeleteMemberAgentDone ->
+        HandleDeleteFleetMembershipDone [style=invis];
+    }
+
+    subgraph cluster_FleetHandlerTopic {
+        // Order nodes.
+        FleetHandlerTopic ->
+        DeleteMemberAgent [style=invis];
+    }
+
+    subgraph cluster_FleetHandler {
+        style=filled;
+        fillcolor=lightblue;
+        rank=same;
+
+        // Order nodes.
+        FleetHandler ->
+        HandleDeleteMembership [style=invis];
+    }
+
+    subgraph cluster_HCP {
+        style=filled;
+        fillcolor=lightblue;
+
+        HCP;
+    }
+
+    // Order subgraphs.
+    FleetAPI -> FleetAsyncQueue -> FleetAsync -> FleetHandlerTopic -> FleetHandler [style=invis];
+
+    // FleetAPI.
+	FleetAPI -> DeleteFleetMembership [ltail=cluster_FleetAPI];
+
+    // FleetAsync.
+    DeleteFleetMembership ->
+    HandleDeleteFleetMembership -> DeleteMemberAgent;
+    // Continued in FleetHandler.
+    DeleteMemberAgentDone ->
+    HandleDeleteMemberAgentDone -> DeleteFleetMembershipDone ->
+    HandleDeleteFleetMembershipDone;
+    HandleDeleteFleetMembershipDone -> HCP [lhead=cluster_HCP];
+
+    // FleetHandler.
+    DeleteMemberAgent ->
+    HandleDeleteMembership -> DeleteMemberAgentDone;
+}

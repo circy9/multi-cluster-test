@@ -1,0 +1,132 @@
+// This graph depicts the flow of CreateFleetMember.
+digraph CreateFleetMember {
+    fontname="Helvetica,Arial,sans-serif";
+    node [fontname="Helvetica,Arial,sans-serif"];
+    edge [fontname="Helvetica,Arial,sans-serif"];
+    compound=true;
+    nodesep="0.4 equally";
+    ranksep="0.4 equally";
+
+    // Components.
+    node [color=lightblue]
+    FleetAPI;
+    FleetAsync;
+    FleetHandler;
+    HCP;
+
+    // Queues.
+    node [color=white]
+    FleetAsyncQueue;
+    FleetHandlerTopic;
+
+    // Commands.
+    node [shape=oval,style=filled,color=black,fillcolor=white];
+    CreateFleetMemberCommand;
+    GetMemberClusterIdentityCommand;
+    CreateMemberClusterCRCommand;
+    CreateFleetMembershipResourceCommand;
+
+    // Responses.
+    node [shape=oval,style=filled,color=black,fillcolor=lightgrey];
+    CreateFleetMemberDone;
+    GetMemberClusterIdentityDone;
+    CreateMemberClusterCRDone;
+    CreateFleetMembershipResourceDone;
+
+    // Handlers.
+    node [shape=box,style=filled,color=black,fillcolor=white];
+    HandleCreateFleetMember;
+    HandleCreateFleetMemberDone;
+    HandleGetMemberClusterIdentity;
+    HandleGetMemberClusterIdentityDone;
+    HandleCreateMemberClusterCR;
+    HandleCreateMemberClusterCRDone;
+    HandleCreateFleetMembershipResource;
+    HandleCreateFleetMembershipResourceDone;
+
+    // Combiner.
+    node [shape=circle,style=filled,color=black,fillcolor=lightgrey,width=0.5];
+    AND;
+
+    subgraph cluster_FleetAPI {
+    style=filled;
+    fillcolor=lightblue;
+    FleetAPI;
+    }
+
+    subgraph cluster_FleetAsyncQueue {
+        // Order the nodes.
+        FleetAsyncQueue ->
+        CreateFleetMemberCommand ->
+        GetMemberClusterIdentityCommand ->
+        GetMemberClusterIdentityDone ->
+        CreateFleetMembershipResourceCommand ->
+        CreateFleetMembershipResourceDone ->
+        CreateMemberClusterCRDone ->
+        CreateFleetMemberDone [style=invis];
+    }
+
+    subgraph cluster_FleetAsync {
+        style=filled;
+        fillcolor=lightblue;
+
+        // Order nodes.
+        FleetAsync ->
+        HandleCreateFleetMember ->
+        HandleGetMemberClusterIdentity ->
+        HandleGetMemberClusterIdentityDone ->
+        HandleCreateMemberClusterCRDone ->
+        HandleCreateFleetMembershipResource ->
+        HandleCreateFleetMembershipResourceDone ->
+        HandleCreateFleetMemberDone [style=invis];
+
+        AND;
+    }
+
+    subgraph cluster_FleetHandlerTopic {
+        // Order nodes.
+        FleetHandlerTopic ->
+        CreateMemberClusterCRCommand [style=invis];
+    }
+
+    subgraph cluster_FleetHandler {
+        style=filled;
+        fillcolor=lightblue;
+        rank=same;
+
+        // Order nodes.
+        FleetHandler ->
+        HandleCreateMemberClusterCR [style=invis];
+    }
+
+    subgraph cluster_HCP {
+        style=filled;
+        fillcolor=lightblue;
+
+        HCP;
+    }
+
+    // Order subgraphs.
+    FleetAPI -> FleetAsyncQueue -> FleetAsync -> FleetHandlerTopic -> FleetHandler [style=invis];
+
+    // FleetAPI.
+	FleetAPI -> CreateFleetMemberCommand [ltail=cluster_FleetAPI];
+
+    // FleetAsync.
+    CreateFleetMemberCommand ->
+    HandleCreateFleetMember -> GetMemberClusterIdentityCommand ->
+    HandleGetMemberClusterIdentity -> GetMemberClusterIdentityDone ->
+    HandleGetMemberClusterIdentityDone -> CreateMemberClusterCRCommand;
+    // Continued in FleetHandler.
+    HandleCreateMemberClusterCRDone -> AND;
+    HandleCreateFleetMember -> CreateFleetMembershipResourceCommand ->
+    HandleCreateFleetMembershipResource -> CreateFleetMembershipResourceDone ->
+    HandleCreateFleetMembershipResourceDone -> AND;
+    AND -> CreateFleetMemberDone ->
+    HandleCreateFleetMemberDone;
+    HandleCreateFleetMemberDone -> HCP [lhead=cluster_HCP];
+
+    // FleetHandler.
+    CreateMemberClusterCRCommand ->
+    HandleCreateMemberClusterCR -> CreateMemberClusterCRDone;
+}

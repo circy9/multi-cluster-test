@@ -1,0 +1,105 @@
+// This graph depicts the flow of UpdateFleetMemberShip.
+digraph UpdateFleetMemberShip {
+    fontname="Helvetica,Arial,sans-serif";
+    node [fontname="Helvetica,Arial,sans-serif"];
+    edge [fontname="Helvetica,Arial,sans-serif"];
+    compound=true;
+    nodesep="0.4 equally";
+    ranksep="0.4 equally";
+
+    // Components.
+    node [color=lightblue]
+    FleetAPI;
+    FleetAsync;
+    FleetHandler;
+    HCP;
+
+    // Queues.
+    node [color=white]
+    FleetAsyncQueue;
+    FleetHandlerTopic;
+
+    // Commands.
+    node [shape=oval,style=filled,color=black,fillcolor=white];
+    UpdateFleetMembership;
+    UpdateMemberAgent;
+
+    // Responses.
+    node [shape=oval,style=filled,color=black,fillcolor=lightgrey];
+    UpdateFleetMembershipDone;
+    UpdateMemberAgentDone;
+
+    // Handlers.
+    node [shape=box,style=filled,color=black,fillcolor=white];
+    HandleUpdateFleetMembership;
+    HandleUpdateMemberAgentDone;
+    HandleUpdateFleetMembershipDone;
+    HandleUpdateMembership;
+
+    subgraph cluster_FleetAPI {
+        style=filled;
+        fillcolor=lightblue;
+        FleetAPI;
+    }
+
+    subgraph cluster_FleetAsyncQueue {
+        // Order the nodes.
+        FleetAsyncQueue ->
+        UpdateFleetMembership ->
+        UpdateMemberAgentDone ->
+        UpdateFleetMembershipDone [style=invis];
+    }
+
+    subgraph cluster_FleetAsync {
+        style=filled;
+        fillcolor=lightblue;
+
+        // Order nodes.
+        FleetAsync ->
+        HandleUpdateFleetMembership ->
+        HandleUpdateMemberAgentDone ->
+        HandleUpdateFleetMembershipDone [style=invis];
+    }
+
+    subgraph cluster_FleetHandlerTopic {
+        // Order nodes.
+        FleetHandlerTopic ->
+        UpdateMemberAgent [style=invis];
+    }
+
+    subgraph cluster_FleetHandler {
+        style=filled;
+        fillcolor=lightblue;
+        rank=same;
+
+        // Order nodes.
+        FleetHandler ->
+        HandleUpdateMembership [style=invis];
+    }
+
+    subgraph cluster_HCP {
+        style=filled;
+        fillcolor=lightblue;
+
+        HCP;
+    }
+
+    // Order subgraphs.
+    FleetAPI -> FleetAsyncQueue -> FleetAsync -> FleetHandlerTopic -> FleetHandler [style=invis];
+
+    // FleetAPI.
+	FleetAPI -> UpdateFleetMembership [ltail=cluster_FleetAPI];
+
+    // FleetAsync.
+    UpdateFleetMembership ->
+    HandleUpdateFleetMembership -> UpdateMemberAgent;
+    // Continued in FleetHandler.
+    UpdateMemberAgentDone ->
+    HandleUpdateMemberAgentDone -> UpdateFleetMembershipDone ->
+    HandleUpdateFleetMembershipDone;
+    HandleUpdateFleetMembershipDone -> HCP [lhead=cluster_HCP];
+
+    // FleetHandler.
+    UpdateMemberAgent ->
+    HandleUpdateMembership -> UpdateMemberAgentDone;
+}
