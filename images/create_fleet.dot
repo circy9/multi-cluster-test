@@ -1,0 +1,112 @@
+// This graph depicts the flow of CreateFleet.
+digraph CreateFleet {
+	fontname="Helvetica,Arial,sans-serif";
+	node [fontname="Helvetica,Arial,sans-serif"];
+	edge [fontname="Helvetica,Arial,sans-serif"];
+    compound=true;
+    nodesep="0.4 equally";
+    ranksep="0.4 equally";
+
+    // Components.
+    node [color=lightblue];
+    FleetAPI;
+    FleetAsync;
+    FleetHandler;
+    HCP;
+
+    // Queues.
+    node [color=white];
+    FleetAsyncQueue;
+    FleetHandlerTopic;
+
+    // Commands.
+    node [shape=oval,style=filled,color=black,fillcolor=white];
+    CreateFleetCommand;
+    CreateHubClusterCommand;
+    CreateHubAgentCommand;
+
+    // Responses.
+    node [shape=oval,style=filled,color=black,fillcolor=lightgrey];
+    CreateFleetDone;
+    CreateHubClusterDone;
+    CreateHubAgentDone;
+
+    // Handlers.
+    node [shape=box,style=filled,color=black,fillcolor=white];
+    HandleCreateFleet;
+    HandleCreateFleetDone;
+    HandleCreateHubCluster;
+    HandleCreateHubClusterDone;
+    HandleCreateHubAgent;
+    HandleCreateHubAgentDone;
+
+    subgraph cluster_FleetAPI {
+        style=filled;
+        fillcolor=lightblue;
+
+        FleetAPI;
+    }
+
+    subgraph cluster_FleetAsyncQueue {
+        // Order nodes.
+        FleetAsyncQueue ->
+        CreateFleetCommand ->
+        CreateHubClusterCommand ->
+        CreateHubClusterDone ->
+        CreateFleetDone [style=invis];
+ 	}
+
+	subgraph cluster_FleetAsync {
+        style=filled;
+        fillcolor=lightblue;
+
+        // Order nodes.
+        FleetAsync ->
+        HandleCreateFleet ->
+        HandleCreateHubCluster ->
+        HandleCreateHubClusterDone ->
+        HandleCreateHubAgentDone ->
+        HandleCreateFleetDone [style=invis];
+ 	}
+
+	subgraph cluster_FleetHandlerTopic {
+        // Order the nodes.
+        FleetHandlerTopic ->
+        CreateHubAgentCommand ->
+        CreateHubAgentDone [style=invis];
+	}
+
+	subgraph cluster_FleetHandler {
+        style=filled;
+        fillcolor=lightblue;
+
+        // Order the nodes.
+        FleetHandler ->
+        HandleCreateHubAgent [style=invis];
+	}
+
+    subgraph cluster_HCP {
+        style=filled;
+        fillcolor=lightblue;
+
+        HCP;
+    }
+
+	// FleetAPI.
+	FleetAPI -> CreateFleetCommand [ltail=cluster_FleetAPI];
+
+    // FleetAsync.
+    CreateFleetCommand ->
+	HandleCreateFleet -> CreateHubClusterCommand ->
+	HandleCreateHubCluster -> CreateHubClusterDone ->
+	HandleCreateHubClusterDone -> CreateHubAgentCommand;
+    // Continued in FleetHandler.
+    CreateHubAgentDone ->
+	HandleCreateHubAgentDone -> CreateFleetDone ->
+    HandleCreateFleetDone;
+ 	HandleCreateFleetDone -> HCP [lhead=cluster_HCP];
+
+    // FleetHandler.
+    CreateHubAgentCommand ->
+    HandleCreateHubAgent -> CreateHubAgentDone;
+}
