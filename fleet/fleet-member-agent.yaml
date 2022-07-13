@@ -2,30 +2,23 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: fleet-agent
+  name: fleet-member-agent
   namespace: 62ccf8009d3e68000159b902
   labels:
-    helm.sh/chart: fleet-agent-0.1.0
-    app.kubernetes.io/name: fleet-agent
-    app.kubernetes.io/instance: fleet-agent
+    app.kubernetes.io/name: fleet-member-agent
     app.kubernetes.io/version: "0.1.0"
-    app.kubernetes.io/managed-by: Helm
 spec:
   selector:
     matchLabels:
-      app.kubernetes.io/name: fleet-agent
-      app.kubernetes.io/instance: fleet-agent
+      app.kubernetes.io/name: fleet-member-agent
   template:
     metadata:
       labels:
-        app.kubernetes.io/name: fleet-agent
-        app.kubernetes.io/instance: fleet-agent
+        app.kubernetes.io/name: fleet-member-agent
     spec:
       containers:
-        
         - name: msi-adapter
           image: mcr.microsoft.com/aks/ccp/msi-adapter:master.220529.1
-          imagePullPolicy: IfNotPresent
           env:
             - name: SUBSCRIPTION_ID
               value: 8ecadfc9-d1a3-4ea4-b844-0d9f87e4d7c8
@@ -39,13 +32,31 @@ spec:
             capabilities:
               add:
                 - NET_ADMIN
-        
-        - name: fleet-agent
-          image: "testfleetagent.azurecr.io/member-agent:v0.1.0"
-          imagePullPolicy: Always
+        - name: refresh-token
+          image: "testfleetagent.azurecr.io/refresh-token:v0.1.0"
+          #          imagePullPolicy: Always
+          args:
+            - azure
+            - --clientid=d58772ec-ff68-444e-8c29-386ecdacea19
+            - --v=5
           ports:
             - name: http
-              containerPort: 80
+              containerPort: 4000
+          resources:
+            limits:
+              cpu: 500m
+              memory: 1Gi
+            requests:
+              cpu: 100m
+              memory: 128Mi
+          volumeMounts:
+            - name: provider-token
+              mountPath: /config
+        - name: member-agent
+          image: "testfleetagent.azurecr.io/member-agent:v0.1.0"
+#          ports:
+#            - name: http
+#              containerPort: 80
           args:
             - --kubeconfig=/etc/kubernetes/kubeconfig/kubeconfig.yaml
             - --tls-insecure=true
@@ -70,30 +81,6 @@ spec:
             requests:
               cpu: 100m
               memory: 128Mi
-
-        - name: refresh-token
-          image: "testfleetagent.azurecr.io/refresh-token:v0.1.0"
-          imagePullPolicy: Always
-          args:
-            - azure
-            - --clientid=d58772ec-ff68-444e-8c29-386ecdacea19
-            - --v=5
-            
-          ports:
-            - name: http
-              containerPort: 4000
-          resources:
-            limits:
-              cpu: 500m
-              memory: 1Gi
-            requests:
-              cpu: 100m
-              memory: 128Mi
-          volumeMounts:
-          - name: provider-token
-            mountPath: /config
-
-      
       volumes:
       - name: provider-token
         emptyDir: { }
