@@ -1,49 +1,4 @@
----
-# Source: fleet-agent/templates/serviceaccount.yaml
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: fleet-agent-sa
-  namespace: 62ccf8009d3e68000159b902
-  labels:
-    helm.sh/chart: fleet-agent-0.1.0
-    app.kubernetes.io/name: fleet-agent
-    app.kubernetes.io/instance: fleet-agent
-    app.kubernetes.io/version: "0.1.0"
-    app.kubernetes.io/managed-by: Helm
----
-# Source: fleet-agent/templates/rbac.yaml
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  name: 62ccf8009d3e68000159b902
-rules:
-  - apiGroups: [ "" ]
-    resources: [ "events" ]
-    verbs: [ "get", "list", "watch", "create", "patch" ]
-  
-  - apiGroups: [""]
-    resources: ["secrets"]
-    verbs: ["get", "list", "watch"]
-  - apiGroups: [ "" ]
-    resources: ["nodes"]
-    verbs: [ "get", "list", "watch"]
----
-# Source: fleet-agent/templates/rbac.yaml
-kind: ClusterRoleBinding
-apiVersion: rbac.authorization.k8s.io/v1
-metadata:
-  name: 62ccf8009d3e68000159b902
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: 62ccf8009d3e68000159b902
-subjects:
-  - kind: ServiceAccount
-    name: fleet-agent-sa
-    namespace: 62ccf8009d3e68000159b902
----
-# Source: fleet-agent/templates/deployment.yaml
+# Member agent deployment.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -66,7 +21,6 @@ spec:
         app.kubernetes.io/name: fleet-agent
         app.kubernetes.io/instance: fleet-agent
     spec:
-      serviceAccountName: fleet-agent-sa
       containers:
         
         - name: msi-adapter
@@ -93,6 +47,7 @@ spec:
             - name: http
               containerPort: 80
           args:
+            - --kubeconfig=/etc/kubernetes/kubeconfig/kubeconfig.yaml
             - --tls-insecure=true
             - --v=5
           env:
@@ -102,6 +57,12 @@ spec:
               value: "/config/token"
             - name: MEMBER_CLUSTER_NAME
               value: "member1"
+          volumeMounts:
+            - mountPath: /etc/kubernetes/kubeconfig
+              readOnly: true
+              name: kubeconfig
+            - name: provider-token
+              mountPath: /config
           resources:
             limits:
               cpu: 500m
@@ -109,9 +70,6 @@ spec:
             requests:
               cpu: 100m
               memory: 128Mi
-          volumeMounts:
-            - name: provider-token
-              mountPath: /config
 
         - name: refresh-token
           image: "testfleetagent.azurecr.io/refresh-token:v0.1.0"
@@ -139,3 +97,6 @@ spec:
       volumes:
       - name: provider-token
         emptyDir: { }
+      - name: kubeconfig
+        secret:
+          secretName: kubeconfig-file
