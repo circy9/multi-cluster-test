@@ -2,36 +2,31 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: fleet-agent
+  name: fleet-hub-agent
   namespace: 62ccf81a9d3e68000159b903
   labels:
-    helm.sh/chart: fleet-agent-0.1.0
-    app.kubernetes.io/name: fleet-agent
-    app.kubernetes.io/instance: fleet-agent
+    app.kubernetes.io/name: fleet-hub-agent
     app.kubernetes.io/version: "0.1.0"
-    app.kubernetes.io/managed-by: Helm
 spec:
   selector:
     matchLabels:
-      app.kubernetes.io/name: fleet-agent
-      app.kubernetes.io/instance: fleet-agent
+      app.kubernetes.io/name: fleet-hub-agent
   template:
     metadata:
       labels:
-        app.kubernetes.io/name: fleet-agent
-        app.kubernetes.io/instance: fleet-agent
+        app.kubernetes.io/name: fleet-hub-agent
     spec:
       containers:
-        - name: fleet-agent
+        - name: hub-agent
           image: "testfleetagent.azurecr.io/hub-agent:v0.1.0"
-          imagePullPolicy: Always
+#          imagePullPolicy: Always
           args:
             - --kubeconfig=/etc/kubernetes/kubeconfig/kubeconfig.yaml
             - --v=5
-          ports:
-            - name: http
-              containerPort: 80
-              protocol: TCP
+#          ports:
+#            - name: http
+#              containerPort: 80
+#              protocol: TCP
           volumeMounts:
             - mountPath: /etc/kubernetes/kubeconfig
               readOnly: true
