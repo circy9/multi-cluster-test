@@ -3,7 +3,7 @@ kind: MemberCluster
 metadata:
   name: member1
 spec:
-  state: Leave
+  state: Join
   identity:
     name: 8ff738a5-abcd-4864-a162-6c18f7c9cbd9
     kind: User
