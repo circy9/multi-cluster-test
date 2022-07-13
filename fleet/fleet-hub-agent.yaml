@@ -19,14 +19,9 @@ spec:
       containers:
         - name: hub-agent
           image: "testfleetagent.azurecr.io/hub-agent:v0.1.0"
-#          imagePullPolicy: Always
           args:
             - --kubeconfig=/etc/kubernetes/kubeconfig/kubeconfig.yaml
             - --v=5
-#          ports:
-#            - name: http
-#              containerPort: 80
-#              protocol: TCP
           volumeMounts:
             - mountPath: /etc/kubernetes/kubeconfig
               readOnly: true

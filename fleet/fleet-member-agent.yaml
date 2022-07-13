@@ -34,7 +34,6 @@ spec:
                 - NET_ADMIN
         - name: refresh-token
           image: "testfleetagent.azurecr.io/refresh-token:v0.1.0"
-          #          imagePullPolicy: Always
           args:
             - azure
             - --clientid=d58772ec-ff68-444e-8c29-386ecdacea19
@@ -54,9 +53,6 @@ spec:
               mountPath: /config
         - name: member-agent
           image: "testfleetagent.azurecr.io/member-agent:v0.1.0"
-#          ports:
-#            - name: http
-#              containerPort: 80
           args:
             - --kubeconfig=/etc/kubernetes/kubeconfig/kubeconfig.yaml
             - --tls-insecure=true
